@@ -141,5 +141,40 @@ public class FileManager {
 
     }
     //end of count line
+    // بخش 4: ویرایش متن کتاب
+// سینا اینو من نوشتم تکمیل شد یه تست بگیر !!
+    // write book text
+    public static void writeBookText(String filePath, String content) throws IOException {
+        // بازنویسی کامل فایل با استفاده از FileWriter
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(filePath))) {
+            bw.write(content);
+        }
+        //  در صورت بروز خطا Exception به کلاس فراخوان پرتاب می‌شود (در امضای متد ذکر شده است)
+    }
+    // end of write book text
+
+    // read full text
+    public static String readFullText(String filePath) {
+        StringBuilder fullText = new StringBuilder();
+        File file = new File(filePath);
+
+        if (!file.exists()) {
+            return "";
+        }
+
+        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+            String line = br.readLine();
+            while (line != null) {
+                fullText.append(line).append("\n");
+                line = br.readLine();
+            }
+        } catch (IOException e) {
+            System.out.println(e.getMessage());
+            return ""; // در صورت بروز خطا رشته خالی برگردانده می‌شود
+        }
+
+        return fullText.toString();
+    }
+    // end of read full text
 
 }
