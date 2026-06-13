@@ -20,6 +20,11 @@ public class MainFrame extends JFrame {
     private JTextArea pageArea;
     private List<String> pages;
     private int currentPage;
+    // سینا این فیلد هارو جا انداختی !
+    private JTextField titleField;
+    private JTextField authorField;
+    private JTextField publisherField;
+    private JTextField yearField;
     //end of fields
 
     //constructor
@@ -37,6 +42,81 @@ public class MainFrame extends JFrame {
     }
     //end of constructor
 
+    // show book menu method
+    public void showBookMenu() {
+        if (booksPanel != null) remove(booksPanel);
+        if (menuPanel != null) remove(menuPanel);
+        if (readerPanel != null) remove(readerPanel);
+
+        menuPanel = new JPanel();
+        menuPanel.setLayout(new GridLayout(7, 2, 10, 10));
+
+        menuPanel.add(new JLabel("Title:"));
+        titleField = new JTextField(selectedBook.getTitle());
+        menuPanel.add(titleField);
+
+        menuPanel.add(new JLabel("Author:"));
+        authorField = new JTextField(selectedBook.getAuthor());
+        menuPanel.add(authorField);
+
+        menuPanel.add(new JLabel("Publisher:"));
+        publisherField = new JTextField(selectedBook.getPublisher());
+        menuPanel.add(publisherField);
+
+        menuPanel.add(new JLabel("Publication Year:"));
+        yearField = new JTextField(String.valueOf(selectedBook.getPublicationYear()));
+        menuPanel.add(yearField);
+
+        menuPanel.add(new JLabel("Total Lines:"));
+        int linesCount = service.countLines(selectedBook);
+        menuPanel.add(new JLabel(String.valueOf(linesCount)));
+
+        JButton saveButton = new JButton("Save Metadata");
+        saveButton.addActionListener(e -> {
+            try {
+                int year = Integer.parseInt(yearField.getText());
+                boolean success = service.editBookMetadata(
+                        selectedBook.getId(),
+                        titleField.getText(),
+                        authorField.getText(),
+                        publisherField.getText(),
+                        year
+                );
+                if (success) {
+                    JOptionPane.showMessageDialog(this, "Metadata saved successfully!");
+                } else {
+                    JOptionPane.showMessageDialog(this, "Error: Book not found.", "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(this, "Please enter a valid number for the year.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+        menuPanel.add(saveButton);
+
+        JButton readButton = new JButton("Read Book");
+        readButton.addActionListener(e -> openBook(false));
+        menuPanel.add(readButton);
+
+        JButton editButton = new JButton("Edit Book");
+        editButton.addActionListener(e -> openBook(true));
+        menuPanel.add(editButton);
+
+        JButton backButton = new JButton("Back");
+        backButton.addActionListener(e -> {
+            createBooksPanel();
+            add(booksPanel);
+            revalidate();
+            repaint();
+        });
+        menuPanel.add(backButton);
+
+        add(menuPanel);
+        revalidate();
+        repaint();
+    }
+    // end of show book menu method
+
+
     //create book panel method
     public void createBooksPanel(){
 
@@ -50,6 +130,8 @@ public class MainFrame extends JFrame {
             remove(readerPanel);
         }
 
+
+
         List<Book> books = service.getAllBooks();
         booksPanel = new JPanel();
         GridLayout gridLayout= new GridLayout(2, 2, 10, 10);
@@ -61,7 +143,8 @@ public class MainFrame extends JFrame {
                 @Override
                 public void actionPerformed(ActionEvent e) {
                     selectedBook = book;
-                    //showBookMenu(); //هر موقع این متد رو نوشتی این کامنت رو بردار
+                    showBookMenu(); // هر موقع این متد رو نوشتی این کامنت رو بردار
+                    // سلام سینا من اینو درستش کردم حله !
                 }
             });
             booksPanel.add(bookButton);
@@ -112,34 +195,63 @@ public class MainFrame extends JFrame {
         JPanel panelOfButton = new JPanel();
 
         JButton prevButton = new JButton("<");
-        prevButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                if (currentPage > 0){
-                    currentPage--;
-                    pageArea.setText(pages.get(currentPage));
+        prevButton.addActionListener(e -> {
+            if (currentPage > 0) {
+                if (editable) {
+                    pages.set(currentPage, pageArea.getText()); // ذخیره تغییرات صفحه فعلی قبل از ورق زدن
                 }
+                currentPage--;
+                pageArea.setText(pages.get(currentPage));
             }
         });
 
         JButton nextButton = new JButton(">");
-        nextButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                if (currentPage < pages.size() - 1){
-                    currentPage++;
-                    pageArea.setText(pages.get(currentPage));
+        nextButton.addActionListener(e -> {
+            if (currentPage < pages.size() - 1) {
+                if (editable) {
+                    pages.set(currentPage, pageArea.getText()); // ذخیره تغییرات صفحه فعلی قبل از ورق زدن
                 }
+                currentPage++;
+                pageArea.setText(pages.get(currentPage));
             }
         });
-        //end of buttons
-
-        if (editable){
-            //این بخش رو اضافه کن مربوط به متدهایی هست که نوشتی
-        }
 
         panelOfButton.add(prevButton);
         panelOfButton.add(nextButton);
+
+        //  سینا این اوکی شد !
+        if (editable) {
+            JButton applyButton = new JButton("Apply");
+            applyButton.addActionListener(e -> {
+                try {
+                    // ذخیره کردن آخرین تغییرات صفحه‌ای که الان روبروی کاربر باز است
+                    pages.set(currentPage, pageArea.getText());
+
+                    // چسباندن تمام صفحات به یکدیگر
+                    StringBuilder fullContent = new StringBuilder();
+                    for (String p : pages) {
+                        fullContent.append(p);
+                    }
+
+                    // فراخوانی متد سرویس برای ذخیره در فایل
+                    boolean success = service.editBookContent(selectedBook.getId(), fullContent.toString());
+
+                    if (success) {
+                        JOptionPane.showMessageDialog(this, "Book content updated successfully!");
+                    } else {
+                        JOptionPane.showMessageDialog(this, "Failed to update book content.", "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(this, "Error saving file: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            });
+            panelOfButton.add(applyButton);
+        }
+
+        // دکمه بازگشت به منوی اطلاعات کتاب
+        JButton backButton = new JButton("Back");
+        backButton.addActionListener(e -> showBookMenu());
+        panelOfButton.add(backButton);
 
         readerPanel.add(pageArea, BorderLayout.CENTER);
         readerPanel.add(panelOfButton, BorderLayout.SOUTH);
@@ -147,6 +259,7 @@ public class MainFrame extends JFrame {
         add(readerPanel);
         revalidate();
         repaint();
+        //end of buttons
 
     }
     //end of open book method
